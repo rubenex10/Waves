@@ -18,13 +18,13 @@ import org.scalatest.{Matchers, PropSpec}
 
 class ContractIntegrationTest extends PropSpec with PropertyChecks with ScriptGen with Matchers with NoShrink {
 
-  property("Simple test") {
-    val ctx: CTX =
-      PureContext.build(StdLibVersion.V3) |+|
-        CTX(sampleTypes, Map.empty, Array.empty) |+|
-        WavesContext.build(StdLibVersion.V3, Common.emptyBlockchainEnvironment(), false)
+  val ctx: CTX =
+    PureContext.build(StdLibVersion.V3) |+|
+      CTX(sampleTypes, Map.empty, Array.empty) |+|
+      WavesContext.build(StdLibVersion.V3, Common.emptyBlockchainEnvironment(), false)
 
-    val src =
+  property("Simple test") {
+    parseCompileAndEvaluate(
       """
         |
         |func fooHelper2() = {
@@ -48,27 +48,71 @@ class ContractIntegrationTest extends PropSpec with PropertyChecks with ScriptGe
         |  true
         |}
         |
-      """.stripMargin
-
-    val parsed = Parser.parseContract(src).get.value
-
-    val compiled = ContractCompiler(ctx.compilerContext, parsed).explicitGet()
-
-    val expectedResult = ContractResult(
+      """.stripMargin,
+      "foo"
+    ).explicitGet() shouldBe ContractResult(
       List(
         DataItem.Bin("a", ByteStr.empty),
         DataItem.Bin("sender", ByteStr.empty)
       ),
       List()
     )
+  }
 
-    val result = ContractEvaluator(
+  /*property("Same name of function's argument and annotation's argument") {
+    parseCompileAndEvaluate(
+      """
+        |@Callable(i)
+        |func some(i: Int) = {
+        |
+        |   if (i.contractAddress == "abc") then
+        |      WriteSet(List(DataEntry("a", "a")))
+        |   else
+        |      WriteSet(List(DataEntry("a", "b")))
+        |}
+      """.stripMargin,
+      "some",
+      List(Terms.CONST_LONG(5))
+    ).explicitGet() shouldBe ContractResult( //TODO ловить ошибку
+      List(
+        DataItem.Str("a", "a")
+      ),
+      List()
+    )
+  }*/
+
+  property("Same name of function's argument and annotation's argument") {
+    parseCompileAndEvaluate(
+      """
+        |@Callable(i)
+        |func some(j: String, i: Int) = {
+        |   if (i < 3) then
+        |      WriteSet(List(DataEntry("a", "a")))
+        |   else
+        |      WriteSet(List(DataEntry("a", "b")))
+        |}
+      """.stripMargin,
+      "some",
+      List(Terms.CONST_STRING("abc"), Terms.CONST_LONG(5))
+    ).explicitGet() shouldBe ContractResult( //TODO ловить ошибку
+      List(
+        DataItem.Str("a", "a")
+      ),
+      List()
+    )
+  }
+
+  def parseCompileAndEvaluate(script: String,
+                              func: String,
+                              args: List[Terms.EXPR] = List(Terms.CONST_BYTESTR(ByteStr.empty))): Either[ExecutionError, ContractResult] = {
+    val parsed   = Parser.parseContract(script).get.value
+    val compiled = ContractCompiler(ctx.compilerContext, parsed).explicitGet()
+
+    ContractEvaluator(
       ctx.evaluationContext,
       compiled,
-      Invocation(Terms.FUNCTION_CALL(FunctionHeader.User("foo"), List(Terms.CONST_BYTESTR(ByteStr.empty))), ByteStr.empty, None, ByteStr.empty)
-    ).explicitGet()
-
-    result shouldBe expectedResult
+      Invocation(Terms.FUNCTION_CALL(FunctionHeader.User(func), args), ByteStr.empty, None, ByteStr.empty)
+    )
   }
 
 }
