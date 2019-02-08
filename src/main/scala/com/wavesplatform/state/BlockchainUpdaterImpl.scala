@@ -5,6 +5,7 @@ import com.wavesplatform.account.{Address, Alias}
 import com.wavesplatform.block.Block.BlockId
 import com.wavesplatform.block.{Block, BlockHeader, MicroBlock}
 import com.wavesplatform.common.state.ByteStr
+import com.wavesplatform.database.LevelDBWriter
 import com.wavesplatform.features.BlockchainFeatures
 import com.wavesplatform.features.FeatureProvider._
 import com.wavesplatform.metrics.{Instrumented, TxsInBlockchainStats}
@@ -23,7 +24,7 @@ import kamon.metric.MeasurementUnit
 import monix.reactive.subjects.ConcurrentSubject
 import monix.reactive.{Observable, Observer}
 
-class BlockchainUpdaterImpl(blockchain: Blockchain, portfolioChanged: Observer[Address], settings: WavesSettings, time: Time)
+class BlockchainUpdaterImpl(blockchain: LevelDBWriter, portfolioChanged: Observer[Address], settings: WavesSettings, time: Time)
     extends BlockchainUpdater
     with NG
     with ScorexLogging
@@ -546,9 +547,7 @@ class BlockchainUpdaterImpl(blockchain: Blockchain, portfolioChanged: Observer[A
       blockchain.collectLposPortfolios(pf) ++ b.result()
     }
 
-  override def append(diff: Diff, carry: Long, block: Block): Unit = blockchain.append(diff, carry, block)
-
-  override def rollbackTo(targetBlockId: AssetId): Either[String, Seq[Block]] = blockchain.rollbackTo(targetBlockId)
+  def rollbackTo(targetBlockId: AssetId): Either[String, Seq[Block]] = blockchain.rollbackTo(targetBlockId)
 
   override def transactionHeight(id: AssetId): Option[Int] =
     ngState flatMap { ng =>

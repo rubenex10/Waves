@@ -18,7 +18,6 @@ import com.wavesplatform.utils._
 import com.wavesplatform.utx.UtxPool
 import monix.execution.{Scheduler, UncaughtExceptionReporter}
 import monix.reactive.Observer
-import org.slf4j.bridge.SLF4JBridgeHandler
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -26,10 +25,6 @@ import scala.util.{Failure, Success, Try}
 
 object Importer extends ScorexLogging {
   def main(args: Array[String]): Unit = {
-
-    SLF4JBridgeHandler.removeHandlersForRootLogger()
-    SLF4JBridgeHandler.install()
-
     val argi = args.iterator
     val (verifyTransactions, configOpt) = {
       Try(argi.next) match {

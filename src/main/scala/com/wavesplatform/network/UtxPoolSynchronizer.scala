@@ -9,7 +9,7 @@ import com.wavesplatform.transaction.Transaction
 import com.wavesplatform.utils.ScorexLogging
 import com.wavesplatform.utx.UtxPool
 import io.netty.channel.Channel
-import io.netty.channel.group.{ChannelGroup, ChannelMatcher}
+import io.netty.channel.group.ChannelGroup
 import monix.execution.{CancelableFuture, Scheduler}
 
 import scala.util.control.NonFatal
@@ -46,11 +46,10 @@ object UtxPoolSynchronizer extends ScorexLogging {
             .groupBy { case (channel, _) => channel }
             .foreach {
               case (sender, xs) =>
-                val channelMatcher: ChannelMatcher = { (_: Channel) != sender }
                 xs.foreach {
                   case (_, tx) =>
                     utx.putIfNew(tx) match {
-                      case Right((true, _)) => allChannels.write(RawBytes.from(tx), channelMatcher)
+                      case Right((true, _)) => allChannels.write(RawBytes.from(tx), (_: Channel) != sender)
                       case _                =>
                     }
                 }

@@ -138,7 +138,7 @@ abstract class Caches(portfolioChanged: Observer[Address]) extends Blockchain wi
   }
 
   private val balancesCache: LoadingCache[(Address, Option[AssetId]), java.lang.Long] = cache(maxCacheSize * 16, loadBalance)
-  protected def discardBalance(key: (Address, Option[AssetId]))                       = balancesCache.invalidate(key)
+  protected def discardBalance(key: (Address, Option[AssetId])): Unit                 = balancesCache.invalidate(key)
   override def balance(address: Address, mayBeAssetId: Option[AssetId]): Long         = balancesCache.get(address -> mayBeAssetId)
   protected def loadBalance(req: (Address, Option[AssetId])): Long
 
@@ -206,7 +206,7 @@ abstract class Caches(portfolioChanged: Observer[Address]) extends Blockchain wi
                          aliases: Map[Alias, BigInt],
                          sponsorship: Map[AssetId, Sponsorship]): Unit
 
-  override def append(diff: Diff, carryFee: Long, block: Block): Unit = {
+  def append(diff: Diff, carryFee: Long, block: Block): Unit = {
     val newHeight = current._1 + 1
 
     val newAddresses = Set.newBuilder[Address]
@@ -236,7 +236,7 @@ abstract class Caches(portfolioChanged: Observer[Address]) extends Blockchain wi
     for ((address, portfolioDiff) <- diff.portfolios) {
       val aid = addressId(address)
       if (portfolioDiff.balance != 0) {
-        val wbalance = (portfolioDiff.balance + balance(address, None))
+        val wbalance = portfolioDiff.balance + balance(address, None)
         wavesBalances += aid           -> wbalance
         newBalances += (address, None) -> wbalance
       }
@@ -316,7 +316,7 @@ abstract class Caches(portfolioChanged: Observer[Address]) extends Blockchain wi
 
   protected def doRollback(targetBlockId: ByteStr): Seq[Block]
 
-  override def rollbackTo(targetBlockId: ByteStr): Either[String, Seq[Block]] = {
+  def rollbackTo(targetBlockId: ByteStr): Either[String, Seq[Block]] = {
     for {
       height <- heightOf(targetBlockId)
         .toRight(s"No block with signature: $targetBlockId found in blockchain")

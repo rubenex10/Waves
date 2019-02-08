@@ -60,12 +60,12 @@ class UtxPoolImpl(time: Time, blockchain: Blockchain, portfolioChanges: Observer
 
     def addTransaction(tx: Transaction): Unit = {
       sizeStats.increment()
-      bytesStats.increment(tx.bytes().size)
+      bytesStats.increment(tx.bytes().length)
     }
 
     def removeTransaction(tx: Transaction): Unit = {
       sizeStats.decrement()
-      bytesStats.decrement(tx.bytes().size)
+      bytesStats.decrement(tx.bytes().length)
     }
   }
 
@@ -196,9 +196,9 @@ class UtxPoolImpl(time: Time, blockchain: Blockchain, portfolioChanges: Observer
           _ <- Either.cond(transactions.size < utxSettings.maxSize, (), GenericError("Transaction pool size limit is reached"))
 
           transactionsBytes = transactions.values.asScala // Bytes size of all transactions in pool
-            .map(_.bytes().size)
+            .map(_.bytes().length)
             .sum
-          _ <- Either.cond((transactionsBytes + tx.bytes().size) <= utxSettings.maxBytesSize,
+          _ <- Either.cond((transactionsBytes + tx.bytes().length) <= utxSettings.maxBytesSize,
                            (),
                            GenericError("Transaction pool bytes size limit is reached"))
 
