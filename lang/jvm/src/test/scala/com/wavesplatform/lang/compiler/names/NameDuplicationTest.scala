@@ -51,7 +51,6 @@ class NameDuplicationTest extends FreeSpec with PropertyChecks with Matchers wit
       }
 
       "user function and argument; callable annotation bindings and arguments; verifier annotation binding" in {
-        //TODO в testnet.ide успешно компилится, но в тесте - "Can't find a function"
         compileOf("""
              |func i(i: Int) = {
              |   i
@@ -59,7 +58,7 @@ class NameDuplicationTest extends FreeSpec with PropertyChecks with Matchers wit
              |
              |@Callable(x)
              |func foo(i: Int) = {
-             |    WriteSet(List(DataEntry("a", toBase58String(x.contractAddress.bytes))))
+             |    WriteSet(List(DataEntry("a", x.contractAddress.bytes)))
              |}
              |
              |@Callable(i)
