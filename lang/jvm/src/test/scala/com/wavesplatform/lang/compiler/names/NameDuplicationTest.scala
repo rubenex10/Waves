@@ -21,27 +21,55 @@ class NameDuplicationTest extends FreeSpec with PropertyChecks with Matchers wit
 
     "should succeed when" - {
 
-      "annotation bindings and args of another func have the same name" in {
+      "constant and user function argument" in {
         compileOf("""
+                    |let x = 42
+                    |
+                    |func some(y: Boolean, x: Boolean) = {
+                    |    !x
+                    |}
+                    |""") shouldBe 'right
+      }
+
+      "constant and callable function argument" in {
+        compileOf("""
+                    |let x = 42
+                    |
+                    |@Callable(i)
+                    |func some(a: Int, x: String) = {
+                    |    WriteSet(List(DataEntry("a", x)))
+                    |}
+                    |""") shouldBe 'right
+      }
+
+      "user function and its argument" in {
+        compileOf("""
+                    |func sameName(sameName: Boolean) = {
+                    |   !sameName
+                    |}
+                    |""") shouldBe 'right
+      }
+
+      "user function and argument; callable annotation bindings and arguments; verifier annotation binding" in {
+        //TODO в testnet.ide успешно компилится, но в тесте - "Can't find a function"
+        compileOf("""
+             |func i(i: Int) = {
+             |   i
+             |}
+             |
              |@Callable(x)
              |func foo(i: Int) = {
-             |    WriteSet(List(DataEntry("a", "a")))
+             |    WriteSet(List(DataEntry("a", toBase58String(x.contractAddress.bytes))))
              |}
              |
              |@Callable(i)
              |func bar(x: Int) = {
-             |    WriteSet(List(DataEntry("a", "a")))
+             |    WriteSet(List(DataEntry("a", x + 1)))
              |}
-             |""") shouldBe 'right
-      }
-
-      "declaration vars and func args have the same name" in {
-        compileOf("""
-             |let x = 42
              |
-             |@Callable(i)
-             |func some(x: String) = {
-             |    WriteSet(List(DataEntry("a", x)))
+             |@Verifier(i)
+             |func verify() = {
+             |   i(1) > 0
              |}
              |""") shouldBe 'right
       }
@@ -50,7 +78,14 @@ class NameDuplicationTest extends FreeSpec with PropertyChecks with Matchers wit
 
     "should fail when" - {
 
-      "these have the same name" - {
+      "these have the same name:" - {
+
+        "two constants" in {
+          compileOf("""
+                      |let x = 42
+                      |let x = true
+                      |""") should produce("already defined")
+        }
 
         "constant and user function" in {
           compileOf("""
@@ -84,6 +119,28 @@ class NameDuplicationTest extends FreeSpec with PropertyChecks with Matchers wit
                       |""") should produce("already defined")
         }
 
+        "constant and callable annotation binding" in {
+          compileOf("""
+                      |let x = 42
+                      |
+                      |@Callable(x)
+                      |func some(i: Int) = {
+                      |    WriteSet(List(DataEntry("a", "a")))
+                      |}
+                      |""") should produce("already defined")
+        }
+
+        "constant and verifier annotation binding" in {
+          compileOf("""
+                      |let x = 42
+                      |
+                      |@Verifier(x)
+                      |func some() = {
+                      |    true
+                      |}
+                      |""") should produce("already defined")
+        }
+
         "two user functions" in {
           compileOf("""
                     |func sameName() = {
@@ -92,6 +149,15 @@ class NameDuplicationTest extends FreeSpec with PropertyChecks with Matchers wit
                     |
                     |func sameName() = {
                     |   1
+                    |}
+                    |""") should produce("already defined")
+        }
+
+        "two user function arguments" in {
+          //TODO не хватает пробела в Function'some' declared with duplicating argument names
+          compileOf("""
+                    |func some(sameName: String, sameName: Int) = {
+                    |   sameName
                     |}
                     |""") should produce("already defined")
         }
@@ -122,6 +188,35 @@ class NameDuplicationTest extends FreeSpec with PropertyChecks with Matchers wit
                     |""") should produce("already defined")
         }
 
+        "user function and callable annotation binding" in {
+          compileOf("""
+                      |func i() = {
+                      |   true
+                      |}
+                      |
+                      |@Callable(i)
+                      |func some() = {
+                      |    WriteSet(List(DataEntry("a", i.contractAddress)))
+                      |}
+                      |""") should produce("already defined")
+        }
+
+        "user function and verifier annotation binding" in {
+          compileOf("""
+                      |func i() = {
+                      |   true
+                      |}
+                      |
+                      |@Verifier(i)
+                      |func some() = {
+                      |    if (i.contractAddress == "abc") then
+                      |       true
+                      |    else
+                      |       false
+                      |}
+                      |""") should produce("already defined")
+        }
+
         "two callable functions" in {
           compileOf("""
              |@Callable(i)
@@ -134,6 +229,16 @@ class NameDuplicationTest extends FreeSpec with PropertyChecks with Matchers wit
              |   WriteSet(List(DataEntry("b", "b")))
              |}
              |""") should produce("already defined")
+        }
+
+        "two callable function arguments" in {
+          //TODO не хватает пробела в Function'some' declared with duplicating argument names
+          compileOf("""
+                      |@Callable(i)
+                      |func some(sameName: String, sameName: Int) = {
+                      |   WriteSet(List(DataEntry("b", sameName)))
+                      |}
+                      |""") should produce("already defined")
         }
 
         "callable and verifier functions" in {
@@ -150,18 +255,16 @@ class NameDuplicationTest extends FreeSpec with PropertyChecks with Matchers wit
              |""") should produce("already defined")
         }
 
-        "constant and annotation binding" in {
+        "callable function and its callable annotation binding" in {
           compileOf("""
-             |let x = 42
-             |
-             |@Callable(x)
-             |func some(i: Int) = {
-             |    WriteSet(List(DataEntry("a", "a")))
+             |@Callable(sameName)
+             |func sameName() = {
+             |   WriteSet(List(DataEntry("a", sameName.contractAddress)))
              |}
-             |""") should produce("already defined")
+             |""") shouldBe 'right// produce("already defined")
         }
 
-        "annotation binding and function argument" in {
+        "callable annotation binding and its function argument" in {
           compileOf("""
              |@Callable(i)
              |func some(s: String, i: Int) = {
@@ -170,7 +273,7 @@ class NameDuplicationTest extends FreeSpec with PropertyChecks with Matchers wit
              |   else
              |      WriteSet(List(DataEntry("a", "b")))
              |}
-             |""") should produce("override annotation bindings")
+             |""") should produce("override annotation bindings") //TODO бэд инглиш?
         }
 
       }
