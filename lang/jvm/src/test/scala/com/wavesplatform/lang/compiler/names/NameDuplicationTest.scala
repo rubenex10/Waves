@@ -53,22 +53,25 @@ class NameDuplicationTest extends FreeSpec with PropertyChecks with Matchers wit
       "user function and argument; callable annotation bindings and arguments; verifier annotation binding" in {
         compileOf("""
              |func i(i: Int) = {
-             |   i
+             |   i + 1
              |}
              |
              |@Callable(x)
              |func foo(i: Int) = {
-             |    WriteSet(List(DataEntry("a", x.contractAddress.bytes)))
+             |    WriteSet(List(DataEntry("a", i + 1)))
              |}
              |
              |@Callable(i)
              |func bar(x: Int) = {
-             |    WriteSet(List(DataEntry("a", x + 1)))
+             |    WriteSet(List(DataEntry("a", i.contractAddress.bytes)))
              |}
              |
-             |@Verifier(i)
+             |@Verifier(tx)
              |func verify() = {
-             |   i(1) > 0
+             |   match tx {
+             |      case i: TransferTransaction => i.fee > 0 && i(1) > 0
+             |      case _ => true
+             |   }
              |}
              |""") shouldBe 'right
       }
@@ -153,12 +156,11 @@ class NameDuplicationTest extends FreeSpec with PropertyChecks with Matchers wit
         }
 
         "two user function arguments" in {
-          //TODO не хватает пробела в Function'some' declared with duplicating argument names
           compileOf("""
                     |func some(sameName: String, sameName: Int) = {
                     |   sameName
                     |}
-                    |""") should produce("already defined")
+                    |""") should produce("declared with duplicating argument names")
         }
 
         "user and callable functions" in {
@@ -187,35 +189,6 @@ class NameDuplicationTest extends FreeSpec with PropertyChecks with Matchers wit
                     |""") should produce("already defined")
         }
 
-        "user function and callable annotation binding" in {
-          compileOf("""
-                      |func i() = {
-                      |   true
-                      |}
-                      |
-                      |@Callable(i)
-                      |func some() = {
-                      |    WriteSet(List(DataEntry("a", i.contractAddress)))
-                      |}
-                      |""") should produce("already defined")
-        }
-
-        "user function and verifier annotation binding" in {
-          compileOf("""
-                      |func i() = {
-                      |   true
-                      |}
-                      |
-                      |@Verifier(i)
-                      |func some() = {
-                      |    if (i.contractAddress == "abc") then
-                      |       true
-                      |    else
-                      |       false
-                      |}
-                      |""") should produce("already defined")
-        }
-
         "two callable functions" in {
           compileOf("""
              |@Callable(i)
@@ -231,13 +204,12 @@ class NameDuplicationTest extends FreeSpec with PropertyChecks with Matchers wit
         }
 
         "two callable function arguments" in {
-          //TODO не хватает пробела в Function'some' declared with duplicating argument names
           compileOf("""
                       |@Callable(i)
                       |func some(sameName: String, sameName: Int) = {
                       |   WriteSet(List(DataEntry("b", sameName)))
                       |}
-                      |""") should produce("already defined")
+                      |""") should produce("declared with duplicating argument names")
         }
 
         "callable and verifier functions" in {
@@ -272,7 +244,7 @@ class NameDuplicationTest extends FreeSpec with PropertyChecks with Matchers wit
              |   else
              |      WriteSet(List(DataEntry("a", "b")))
              |}
-             |""") should produce("override annotation bindings") //TODO бэд инглиш?
+             |""") should produce("override annotation bindings")
         }
 
       }
