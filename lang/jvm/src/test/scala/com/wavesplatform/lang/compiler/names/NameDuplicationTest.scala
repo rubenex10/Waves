@@ -129,7 +129,7 @@ class NameDuplicationTest extends FreeSpec with PropertyChecks with Matchers wit
                       |func some(i: Int) = {
                       |    WriteSet(List(DataEntry("a", "a")))
                       |}
-                      |""") should produce("already defined")
+                      |""") should produce("Annotation bindings overrides already defined var")
         }
 
         "constant and verifier annotation binding" in {
@@ -140,7 +140,7 @@ class NameDuplicationTest extends FreeSpec with PropertyChecks with Matchers wit
                       |func some() = {
                       |    true
                       |}
-                      |""") should produce("already defined")
+                      |""") should produce("Annotation bindings overrides already defined var")
         }
 
         "two user functions" in {
@@ -230,9 +230,9 @@ class NameDuplicationTest extends FreeSpec with PropertyChecks with Matchers wit
           compileOf("""
              |@Callable(sameName)
              |func sameName() = {
-             |   WriteSet(List(DataEntry("a", sameName.contractAddress)))
+             |   WriteSet(List(DataEntry("a", sameName.contractAddress.bytes)))
              |}
-             |""") shouldBe 'right// produce("already defined")
+             |""") shouldBe 'right// now produce("already defined")
         }
 
         "callable annotation binding and its function argument" in {
