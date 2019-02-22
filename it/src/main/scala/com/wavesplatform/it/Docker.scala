@@ -236,6 +236,7 @@ class Docker(suiteConfig: Config = empty, tag: String = "", enableProfiling: Boo
           s"-Dlogback.stdout.level=TRACE -Dlogback.file.level=OFF -Dwaves.network.declared-address=$ip:$networkPort $ntpServer $maxCacheSize $kafkaServer"
 
         if (enableProfiling) {
+          // https://www.yourkit.com/docs/java/help/startup_options.jsp
           config += s"-agentpath:/usr/local/YourKit-JavaProfiler-2018.04/bin/linux-x86-64/libyjpagent.so=port=$ProfilerPort,listen=all," +
             s"sampling,monitors,sessionname=WavesNode,dir=$ContainerRoot/profiler,logdir=$ContainerRoot "
         }
@@ -436,6 +437,7 @@ class Docker(suiteConfig: Config = empty, tag: String = "", enableProfiling: Boo
       log.trace(s"Snapshot of ${node.name} has not been took yet, wait...")
       blocking(Thread.sleep(1000))
     }
+    log.info(s"Snapshot of ${node.name} has been taken, exit code: ${client.execInspect(task.id).exitCode()}")
   }
 
   private def saveProfile(node: DockerNode): Unit = if (enableProfiling) {
